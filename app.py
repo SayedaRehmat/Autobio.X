@@ -1,84 +1,78 @@
 import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import base64
-from fpdf import FPDF
+import requests
 
-# Load data
-expression_df = pd.read_csv("expression.csv")
-mutation_df = pd.read_csv("mutations.csv")
-drug_df = pd.read_csv("dgidb_drugs.csv")
+# ----------------- Page Setup -----------------
+st.set_page_config(page_title="AutoBio-X", layout="centered")
 
-st.set_page_config(page_title="AutoBio-X", layout="wide")
+st.image("logo.png", width=220)
+st.title("🧬 AutoBio-X: Gene Explorer & Drug Matcher")
+st.markdown(
+    """
+    A real-time AI-powered tool to explore gene expression, mutation impact, and targeted drug matches in breast cancer.
+    """
+)
 
-# Sidebar
-st.sidebar.image("logo.png", width=200)
-lang = st.sidebar.radio("🌐 Language", ["English", "Urdu"])
-st.sidebar.markdown("Created by **Syeda Rehmat** — Founder, BioZero 💛")
+# ----------------- API Helper Functions -----------------
 
-st.title("🧬 AutoBio-X: AI-Powered Gene Analysis Platform")
+BASE_API = "https://autobio-x.onrender.com"
 
-# Input genes
-genes_input = st.text_area("🔍 Enter gene names (comma-separated):", "TP53, BRCA1, EGFR")
-genes = [g.strip().upper() for g in genes_input.split(",") if g.strip()]
+def get_expression_data(gene):
+    try:
+        r = requests.get(f"{BASE_API}/expression/{gene}")
+        return r.json().get("expression", {})
+    except:
+        return {"error": "Failed to fetch expression data."}
 
-if genes:
-    st.subheader("📊 Gene Expression & Mutation Results")
-    report_data = []
+def get_mutation_data(gene):
+    try:
+        r = requests.get(f"{BASE_API}/mutation/{gene}")
+        return r.json()
+    except:
+        return [{"error": "Failed to fetch mutation data."}]
 
-    for gene in genes:
-        exp = expression_df[expression_df['Gene'].str.upper() == gene]
-        mut = mutation_df[mutation_df['Gene'].str.upper() == gene]
-        drugs = drug_df[drug_df['Gene'].str.upper() == gene]
+def get_drug_data(gene):
+    try:
+        r = requests.get(f"{BASE_API}/drugs/{gene}")
+        return r.json()
+    except:
+        return [{"error": "Failed to fetch drug data."}]
 
-        st.markdown(f"### 🔬 {gene}")
+# ----------------- Gene Input Section -----------------
 
-        # Expression
-        if not exp.empty:
-            st.write("**Expression Data:**")
-            st.dataframe(exp)
-            fig, ax = plt.subplots()
-            ax.bar(exp.columns[1:], exp.values[0][1:], color="orchid")
-            ax.set_ylabel("Expression Level")
-            st.pyplot(fig)
-        else:
-            st.warning("No expression data found.")
+gene = st.text_input("🔍 Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
 
-        # Mutation
-        if not mut.empty:
-            st.write("**Mutation Found:**")
-            st.dataframe(mut)
-        else:
-            st.info("No mutation found.")
+if gene:
+    # ----------------- Expression -----------------
+    st.subheader("📊 Expression Data")
+    expr = get_expression_data(gene)
+    if "error" in expr:
+        st.warning(expr["error"])
+    else:
+        st.json(expr)
 
-        # Drugs
-        if not drugs.empty:
-            st.write("💊 **Potential Drug Matches:**")
-            st.dataframe(drugs[['Drug', 'Interaction']])
-        else:
-            st.error("No drug match found.")
+    # ----------------- Mutation -----------------
+    st.subheader("🧬 Mutation Info")
+    muts = get_mutation_data(gene)
+    if isinstance(muts, list) and "error" in muts[0]:
+        st.warning(muts[0]["error"])
+    else:
+        st.json(muts)
 
-        report_data.append((gene, not exp.empty, not mut.empty, not drugs.empty))
+    # ----------------- Drug Matches -----------------
+    st.subheader("💊 Drug Matches")
+    drugs = get_drug_data(gene)
+    if isinstance(drugs, list) and "error" in drugs[0]:
+        st.warning(drugs[0]["error"])
+    else:
+        st.json(drugs)
 
-    # PDF Generator
-    if st.button("📄 Download Gene Report PDF"):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="AutoBio-X Gene Analysis Report", ln=True, align="C")
-        pdf.ln(10)
-        for gene, has_exp, has_mut, has_drug in report_data:
-            pdf.cell(200, 10, txt=f"Gene: {gene}", ln=True)
-            pdf.cell(200, 10, txt=f"- Expression Data: {'Yes' if has_exp else 'No'}", ln=True)
-            pdf.cell(200, 10, txt=f"- Mutation Data: {'Yes' if has_mut else 'No'}", ln=True)
-            pdf.cell(200, 10, txt=f"- Drug Match: {'Yes' if has_drug else 'No'}", ln=True)
-            pdf.ln(5)
-        pdf_file = "gene_report.pdf"
-        pdf.output(pdf_file)
-        with open(pdf_file, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-            href = f'<a href="data:application/octet-stream;base64,{b64}" download="{pdf_file}">📥 Download PDF Report</a>'
-            st.markdown(href, unsafe_allow_html=True)
-
-else:
-    st.info("Please enter at least one gene to analyze.")
+# ----------------- Footer -----------------
+st.markdown(
+    """
+    <hr style='border: 1px solid #ddd;'>
+    <div style="text-align: center; color: gray;">
+        Created by <b>Syeda Rehmat</b> — Founder, <i>BioZero</i>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
