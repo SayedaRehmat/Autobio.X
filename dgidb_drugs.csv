@@ -1,0 +1,5 @@
+Gene,Drug,Interaction
+TP53,Nutlin-3,Inhibitor
+EGFR,Gefitinib,Inhibitor
+PIK3CA,Alpelisib,Targeted
+PTEN,Sirolimus,mTOR pathway
