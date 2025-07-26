@@ -69,9 +69,9 @@ if genes:
         pdf.ln(10)
         for gene, has_exp, has_mut, has_drug in report_data:
             pdf.cell(200, 10, txt=f"Gene: {gene}", ln=True)
-            pdf.cell(200, 10, txt=f"- Expression Data: {'✔️' if has_exp else '❌'}", ln=True)
-            pdf.cell(200, 10, txt=f"- Mutation Data: {'✔️' if has_mut else '❌'}", ln=True)
-            pdf.cell(200, 10, txt=f"- Drug Match: {'✔️' if has_drug else '❌'}", ln=True)
+            pdf.cell(200, 10, txt=f"- Expression Data: {'Yes' if has_exp else 'No'}", ln=True)
+            pdf.cell(200, 10, txt=f"- Mutation Data: {'Yes' if has_mut else 'No'}", ln=True)
+            pdf.cell(200, 10, txt=f"- Drug Match: {'Yes' if has_drug else 'No'}", ln=True)
             pdf.ln(5)
         pdf_file = "gene_report.pdf"
         pdf.output(pdf_file)
