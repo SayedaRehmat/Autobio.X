@@ -1,4 +1,4 @@
- # app.py (Streamlit App with Homepage, Hero Banner, and Excel Downloads)
+ # app.py (Streamlit App with Homepage, About, and Contact Form)
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -15,9 +15,6 @@ st.markdown("""
 <style>
     .reportview-container {
         background: #f7f9fc;
-    }
-    .css-1d391kg, .css-1v3fvcr {
-        color: #333;
     }
     .stButton>button {
         background-color: #007BFF;
@@ -53,9 +50,15 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ------------------- ABOUT SECTION -------------------
 st.markdown("""
----
-### Explore gene expression, mutation impact, and drug matches.
+## About AutoBio-X
+AutoBio-X is designed for researchers and clinicians to simplify complex bioinformatics workflows:
+- **Gene Expression Analysis** — Compare gene activity across samples.
+- **Mutation Insights** — Identify impactful gene mutations.
+- **Drug Matches** — Explore drugs targeting specific genes.
+
+This tool was created by **Syeda Rehmat**, Founder of **BioZero**, with a mission to make precision medicine accessible to everyone.
 """)
 
 # ------------------- SEARCH BOX -------------------
@@ -111,7 +114,6 @@ if gene:
             st.subheader("Expression Data")
             expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
             st.dataframe(expr_df)
-            # Bar chart
             fig, ax = plt.subplots()
             ax.bar(expr_df['Sample'], expr_df['Expression'], color='skyblue')
             ax.set_xlabel('Sample')
@@ -156,7 +158,6 @@ if gene:
             pdf.cell(200, 10, txt=safe_text(f"Gene Report: {gene}"), ln=True, align='C')
             pdf.ln(10)
 
-            # Expression Data
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt=safe_text("Expression Data"), ln=True)
             pdf.set_font("Arial", '', 12)
@@ -164,8 +165,6 @@ if gene:
                 pdf.cell(0, 10, txt=safe_text(f"{sample}: {value}"), ln=True)
 
             pdf.ln(5)
-
-            # Mutation Info
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt=safe_text("Mutation Info"), ln=True)
             pdf.set_font("Arial", '', 12)
@@ -174,7 +173,6 @@ if gene:
                     pdf.cell(0, 10, txt=safe_text(f"{k}: {v}"), ln=True)
                 pdf.ln(3)
 
-            # Drug Matches
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt=safe_text("Drug Matches"), ln=True)
             pdf.set_font("Arial", '', 12)
@@ -183,7 +181,6 @@ if gene:
                     pdf.cell(0, 10, txt=safe_text(f"{k}: {v}"), ln=True)
                 pdf.ln(3)
 
-            # Footer
             pdf.ln(10)
             pdf.set_font("Arial", 'I', 10)
             pdf.set_text_color(100, 100, 100)
@@ -199,6 +196,20 @@ if gene:
                         mime="application/pdf"
                     )
                 os.unlink(tmpfile.name)
+
+# ------------------- CONTACT FORM -------------------
+st.markdown("---")
+st.markdown("## Contact Us")
+with st.form("contact_form"):
+    name = st.text_input("Your Name")
+    email = st.text_input("Your Email")
+    message = st.text_area("Your Message")
+    submitted = st.form_submit_button("Send Message")
+    if submitted:
+        if name and email and message:
+            st.success(f"Thank you {name}, your message has been received!")
+        else:
+            st.error("Please fill out all fields.")
 
 # ------------------- FOOTER -------------------
 st.markdown("""
