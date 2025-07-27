@@ -138,11 +138,6 @@ if expression_ok and mutation_ok and drug_ok:
                     mime="application/pdf"
                 )
             os.unlink(tmpfile.name)
-
-
-
-
-
              
 # ------------------- Footer -------------------
 st.markdown("""
