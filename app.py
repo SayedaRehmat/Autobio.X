@@ -70,10 +70,11 @@ if gene:
         st.json(drugs)
 
     # ------------------- PDF Download -------------------
-    def safe_text(text):
+    # Clean non-latin characters for PDF (like emojis)
+def safe_text(text):
     return str(text).encode('latin1', 'ignore').decode('latin1')
 
-# ✅ Only show button if data was fetched correctly
+# ✅ Only show button if all data is present
 if "error" not in expr and "error" not in muts[0] and "error" not in drugs[0]:
     if st.button("📥 Download Report as PDF"):
         pdf = FPDF()
@@ -105,6 +106,7 @@ if "error" not in expr and "error" not in muts[0] and "error" not in drugs[0]:
                     mime="application/pdf"
                 )
             os.unlink(tmpfile.name)
+
 
              
 # ------------------- Footer -------------------
