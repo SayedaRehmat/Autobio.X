@@ -1,146 +1,148 @@
+ # app.py
 import streamlit as st
 import requests
+import pandas as pd
 from fpdf import FPDF
 import tempfile
 import os
 
-# ------------------- Config -------------------
-st.set_page_config(page_title="AutoBio-X", layout="centered")
-
+# ------------------- CONFIG -------------------
+st.set_page_config(page_title="AutoBio-X", layout="wide")
 BASE_API = "https://autobio-x.onrender.com"
 
-# ------------------- UI Header -------------------
+# ------------------- HEADER -------------------
 st.image("logo.png", width=220)
-st.title("🧬 AutoBio-X: Gene Explorer & Drug Matcher")
+st.title("\ud83e\uddec AutoBio-X: Gene Explorer & Drug Matcher")
 
 st.markdown("""
-A real-time AI-powered tool to explore gene expression, mutation impact, and targeted drug matches in breast cancer.
+### A real-time AI-powered tool to explore gene expression, mutation impact, and targeted drug matches in breast cancer.
+**Sign up for early updates and exclusive reports!**
 """)
 
-# ------------------- API Connectors -------------------
+# ------------------- LANDING PAGE -------------------
+with st.expander("\ud83d\udc8c Join our email list for premium features"):
+    email = st.text_input("Your email")
+    if st.button("Subscribe"):
+        st.success(f"Thanks for subscribing, {email}! We'll keep you posted.")
 
-def get_expression_data(gene):
+# ------------------- API HELPERS -------------------
+def get_expression_data(gene: str):
     try:
-        r = requests.get(f"{BASE_API}/expression/{gene}")
+        r = requests.get(f"{BASE_API}/expression/{gene}", timeout=10)
         return r.json().get("expression", {})
-    except:
+    except Exception:
         return {"error": "Failed to fetch expression data."}
 
-def get_mutation_data(gene):
+
+def get_mutation_data(gene: str):
     try:
-        r = requests.get(f"{BASE_API}/mutation/{gene}")
+        r = requests.get(f"{BASE_API}/mutation/{gene}", timeout=10)
         return r.json()
-    except:
+    except Exception:
         return [{"error": "Failed to fetch mutation data."}]
 
-def get_drug_data(gene):
+
+def get_drug_data(gene: str):
     try:
-        r = requests.get(f"{BASE_API}/drugs/{gene}")
+        r = requests.get(f"{BASE_API}/drugs/{gene}", timeout=10)
         return r.json()
-    except:
+    except Exception:
         return [{"error": "Failed to fetch drug data."}]
 
-# ------------------- Gene Input -------------------
 
-gene = st.text_input("🔍 Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
-
- # Clean invalid characters for PDF
 def safe_text(text):
     return str(text).encode('latin1', 'ignore').decode('latin1')
 
-# -------- Inside Gene Query Section --------
+# ------------------- GENE INPUT -------------------
+gene = st.text_input("\ud83d\udd0d Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
 
-# 🔒 PREVENT "Not defined" error by initializing safely
-expr, muts, drugs = {}, [{"error": "Not fetched"}], [{"error": "Not fetched"}]
+expr, muts, drugs = {}, [], []
 
 if gene:
-     import pandas as pd
+    with st.spinner("Fetching data..."):
+        expr = get_expression_data(gene)
+        muts = get_mutation_data(gene)
+        drugs = get_drug_data(gene)
 
-if expr and "error" not in expr:
-    st.subheader("📊 Expression Data")
-    expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
-    st.dataframe(expr_df)
-else:
-    st.warning(expr.get("error", "No expression data available."))
+    # ------------------- DISPLAY DATA -------------------
+    if expr and isinstance(expr, dict) and "error" not in expr:
+        st.subheader("\ud83d\udcca Expression Data")
+        expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
+        st.dataframe(expr_df)
+    else:
+        st.warning(expr.get("error", "No expression data available."))
 
+    if muts and isinstance(muts, list) and "error" not in muts[0]:
+        st.subheader("\ud83e\uddec Mutation Info")
+        st.table(pd.DataFrame(muts))
+    else:
+        st.warning(muts[0].get("error", "No mutation data found."))
 
-if muts and isinstance(muts, list) and "error" not in muts[0]:
-    st.subheader("🧬 Mutation Info")
-    st.table(pd.DataFrame(muts))
-else:
-    st.warning(muts[0].get("error", "No mutation data found."))
+    if drugs and isinstance(drugs, list) and "error" not in drugs[0]:
+        st.subheader("\ud83d\udc8a Drug Matches")
+        st.table(pd.DataFrame(drugs))
+    else:
+        st.warning(drugs[0].get("error", "No drug matches found."))
 
+    # ------------------- PDF REPORT -------------------
+    expression_ok = expr and isinstance(expr, dict) and "error" not in expr
+    mutation_ok = muts and isinstance(muts, list) and "error" not in muts[0]
+    drug_ok = drugs and isinstance(drugs, list) and "error" not in drugs[0]
 
-if drugs and isinstance(drugs, list) and "error" not in drugs[0]:
-    st.subheader("💊 Drug Matches")
-    st.table(pd.DataFrame(drugs))
-else:
-    st.warning(drugs[0].get("error", "No drug matches found."))
+    if expression_ok and mutation_ok and drug_ok:
+        if st.button("\ud83d\udc45 Download Report as PDF"):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=14)
+            pdf.set_text_color(33, 33, 33)
+            pdf.cell(200, 10, txt=safe_text(f"Gene Report: {gene}"), ln=True, align='C')
+            pdf.ln(10)
 
+            # Expression Data
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt=safe_text("Expression Data"), ln=True)
+            pdf.set_font("Arial", '', 12)
+            for sample, value in expr.items():
+                pdf.cell(0, 10, txt=safe_text(f"{sample}: {value}"), ln=True)
 
-# ✅ Check that all data is valid
-expression_ok = expr and isinstance(expr, dict) and "error" not in expr
-mutation_ok = muts and isinstance(muts, list) and "error" not in muts[0]
-drug_ok = drugs and isinstance(drugs, list) and "error" not in drugs[0]
+            pdf.ln(5)
 
-# ✅ Clean out emojis / Urdu / symbols for PDF
-def safe_text(text):
-    return str(text).encode('latin1', 'ignore').decode('latin1')
-if expression_ok and mutation_ok and drug_ok:
-    if st.button("📥 Download Report as PDF"):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=14)
-        pdf.set_text_color(33, 33, 33)
-        pdf.cell(200, 10, txt=safe_text(f"Gene Report: {gene}"), ln=True, align='C')
-        pdf.ln(10)
+            # Mutation Info
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt=safe_text("Mutation Info"), ln=True)
+            pdf.set_font("Arial", '', 12)
+            for mut in muts:
+                for k, v in mut.items():
+                    pdf.cell(0, 10, txt=safe_text(f"{k}: {v}"), ln=True)
+                pdf.ln(3)
 
-        # Expression Data
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt=safe_text("Expression Data"), ln=True)
-        pdf.set_font("Arial", '', 12)
-        for sample, value in expr.items():
-            pdf.cell(0, 10, txt=safe_text(f"{sample}: {value}"), ln=True)
+            # Drug Matches
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt=safe_text("Drug Matches"), ln=True)
+            pdf.set_font("Arial", '', 12)
+            for drug in drugs:
+                for k, v in drug.items():
+                    pdf.cell(0, 10, txt=safe_text(f"{k}: {v}"), ln=True)
+                pdf.ln(3)
 
-        pdf.ln(5)
+            # Footer
+            pdf.ln(10)
+            pdf.set_font("Arial", 'I', 10)
+            pdf.set_text_color(100, 100, 100)
+            pdf.cell(200, 10, txt=safe_text("Generated by Syeda Rehmat — Founder, BioZero"), ln=True, align='C')
 
-        # Mutation Info
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt=safe_text("Mutation Info"), ln=True)
-        pdf.set_font("Arial", '', 12)
-        for mut in muts:
-            for k, v in mut.items():
-                pdf.cell(0, 10, txt=safe_text(f"{k}: {v}"), ln=True)
-            pdf.ln(3)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmpfile:
+                pdf.output(tmpfile.name)
+                with open(tmpfile.name, "rb") as f:
+                    st.download_button(
+                        label="\u2b07\ufe0f Download PDF Report",
+                        data=f,
+                        file_name=f"{gene}_AutoBioX_Report.pdf",
+                        mime="application/pdf"
+                    )
+                os.unlink(tmpfile.name)
 
-        # Drug Matches
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt=safe_text("Drug Matches"), ln=True)
-        pdf.set_font("Arial", '', 12)
-        for drug in drugs:
-            for k, v in drug.items():
-                pdf.cell(0, 10, txt=safe_text(f"{k}: {v}"), ln=True)
-            pdf.ln(3)
-
-        # Footer
-        pdf.ln(10)
-        pdf.set_font("Arial", 'I', 10)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(200, 10, txt=safe_text("Generated by Syeda Rehmat — Founder, BioZero"), ln=True, align='C')
-
-        # Download logic
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmpfile:
-            pdf.output(tmpfile.name)
-            with open(tmpfile.name, "rb") as f:
-                st.download_button(
-                    label="⬇️ Download PDF Report",
-                    data=f,
-                    file_name=f"{gene}_AutoBioX_Report.pdf",
-                    mime="application/pdf"
-                )
-            os.unlink(tmpfile.name)
- 
-     # ------------------- Footer -------------------
+# ------------------- FOOTER -------------------
 st.markdown("""
 <hr style='border: 1px solid #ddd;'>
 <div style="text-align: center; color: gray;">
