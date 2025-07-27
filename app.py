@@ -83,7 +83,7 @@ if gene:
     mutation_ok = muts and isinstance(muts, list) and "error" not in muts[0]
     drug_ok = drugs and isinstance(drugs, list) and "error" not in drugs[0]
 
-     if expression_ok and mutation_ok and drug_ok:
+    if expression_ok and mutation_ok and drug_ok:
     # ... PDF code here ...
 
 def safe_text(text):
