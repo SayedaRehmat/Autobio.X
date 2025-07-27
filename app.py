@@ -19,6 +19,14 @@ st.markdown("""
 **Sign up for early updates and exclusive reports!**
 """)
 
+# ------------------- API STATUS PANEL -------------------
+with st.expander("API Status & Debug"):
+    try:
+        test = requests.get(BASE_API, timeout=5)
+        st.info(f"API Status: {test.status_code}")
+    except Exception as e:
+        st.error(f"API unreachable: {e}")
+
 # ------------------- LANDING PAGE -------------------
 with st.expander("Join our email list for premium features"):
     email = st.text_input("Your email")
