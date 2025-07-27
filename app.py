@@ -1,4 +1,4 @@
- # app.py (Merged Streamlit + Backend with Filters)
+ # app.py (Merged Streamlit + Backend with Filters for Drugs and Mutations)
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -47,18 +47,26 @@ if gene:
         expr = {"error": "No expression data found."}
 
     # Mutations
-    muts = mutation_df[mutation_df["Gene"].str.upper() == gene]
-    if muts.empty:
+    muts_df = mutation_df[mutation_df["Gene"].str.upper() == gene]
+    if muts_df.empty:
         muts = [{"error": "No mutation data found."}]
     else:
-        muts = muts.to_dict(orient="records")
+        # Add filter for mutation impact if column exists
+        if "Impact" in muts_df.columns:
+            impact_filter = st.multiselect("Filter Mutations by Impact:", sorted(muts_df["Impact"].unique()), default=list(muts_df["Impact"].unique()))
+            muts_df = muts_df[muts_df["Impact"].isin(impact_filter)]
+        muts = muts_df.to_dict(orient="records")
 
     # Drugs
-    drugs = drug_df[drug_df["Gene"].str.upper() == gene]
-    if drugs.empty:
+    drugs_df = drug_df[drug_df["Gene"].str.upper() == gene]
+    if drugs_df.empty:
         drugs = [{"error": "No drug matches found."}]
     else:
-        drugs = drugs[["Drug", "Interaction"]].to_dict(orient="records")
+        # Add filter for drug interaction or status if column exists
+        if "Interaction" in drugs_df.columns:
+            interaction_filter = st.multiselect("Filter Drugs by Interaction:", sorted(drugs_df["Interaction"].unique()), default=list(drugs_df["Interaction"].unique()))
+            drugs_df = drugs_df[drugs_df["Interaction"].isin(interaction_filter)]
+        drugs = drugs_df[["Drug", "Interaction"]].to_dict(orient="records")
 
     # ------------------- DISPLAY DATA -------------------
     if expr and "error" not in expr:
