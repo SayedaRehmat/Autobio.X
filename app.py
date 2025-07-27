@@ -76,7 +76,7 @@ def clean_text(text):
     # Remove emojis and non-latin chars
     return re.sub(r'[^\x00-\x7F]+', '', str(text))
 
- def safe_text(text):
+def safe_text(text):
     return str(text).encode('latin1', 'ignore').decode('latin1')
 
 if st.button("📥 Download Report as PDF"):
