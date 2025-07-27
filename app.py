@@ -1,4 +1,4 @@
- # app.py - Bioinformatics SaaS Tool with Polished PDF Design
+ # app.py - Final Professional AutoBio-X Pro SaaS Version
 import streamlit as st
 import pandas as pd
 import requests
@@ -22,6 +22,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.sidebar.success("APP VERSION: FINAL RELEASE")
+
 # ------------------- UTILS -------------------
 def to_excel(df):
     output = BytesIO()
@@ -31,9 +33,10 @@ def to_excel(df):
 
 class PDFReport(FPDF):
     def header(self):
-        self.set_fill_color(240, 240, 240)
+        if os.path.exists("logo.png"):
+            self.image("logo.png", 10, 8, 25)
         self.set_font('Arial', 'B', 16)
-        self.cell(0, 15, 'AutoBio-X Pro Report', ln=True, align='C', fill=True)
+        self.cell(0, 15, 'AutoBio-X Pro Report', ln=True, align='C')
         self.ln(5)
 
     def footer(self):
@@ -46,7 +49,6 @@ def generate_pdf(gene, expr, muts, drugs):
     pdf = PDFReport()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.set_text_color(40, 40, 40)
     pdf.multi_cell(0, 10, f"Gene Report: {gene}\n\n")
 
     # Expression Data
@@ -96,7 +98,8 @@ def generate_pdf(gene, expr, muts, drugs):
 def homepage():
     st.markdown("<div class='main-header'>AutoBio-X Pro</div>", unsafe_allow_html=True)
     st.markdown("<div class='sub-header'>AI-powered gene expression & drug discovery tool</div>", unsafe_allow_html=True)
-    st.image("logo.png", width=220) if os.path.exists("logo.png") else None
+    if os.path.exists("logo.png"):
+        st.image("logo.png", width=220)
     st.write("---")
     st.markdown("""
     ### Why Choose AutoBio-X Pro?
@@ -105,12 +108,6 @@ def homepage():
     - **Professional PDF/Excel reports** with branded design.
     - **Pro & Enterprise plans for unlimited features.**
     """)
-
-    st.write("---")
-    st.markdown("<div class='section-title'>Testimonials</div>", unsafe_allow_html=True)
-    st.info("'AutoBio-X Pro has transformed the way we analyze genetic data.' – Dr. Ayesha Khan")
-    st.info("'The drug-matching feature is a game-changer for precision medicine.' – Prof. John Doe")
-
     st.write("---")
     st.markdown("<div class='section-title'>Pricing & Plans</div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
@@ -120,10 +117,8 @@ def homepage():
         st.markdown("<div class='pricing-card'><b>Pro Plan</b><br>$49/month<br>Unlimited searches<br>Branded PDF Reports<br><button>Upgrade</button></div>", unsafe_allow_html=True)
     with col3:
         st.markdown("<div class='pricing-card'><b>Enterprise</b><br>$499/month<br>Custom analysis<br>Dedicated support</div>", unsafe_allow_html=True)
-
     if st.button("Upgrade to Pro Plan ($49/month)"):
         st.info("[Stripe Checkout Placeholder - Integrate Here](https://stripe.com)")
-
     st.write("---")
     st.markdown("<div class='section-title'>Contact Us</div>", unsafe_allow_html=True)
     with st.form("contact_form"):
@@ -165,12 +160,10 @@ def gene_explorer():
     gene = st.text_input("Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
     tabs = st.tabs(["Expression", "Mutations", "Drugs"])
     expr, muts, drugs = {}, [], []
-
     if gene:
         expr = fetch_gene_expression(gene)
         muts = fetch_mutations(gene)
         drugs = fetch_drugs(gene)
-
         with tabs[0]:
             if expr:
                 st.subheader("Expression Data")
@@ -183,7 +176,6 @@ def gene_explorer():
                 st.download_button("Download Expression Excel", to_excel(df_expr), f"{gene}_expression.xlsx")
             else:
                 st.warning("No expression data available.")
-
         with tabs[1]:
             if muts:
                 df_muts = pd.DataFrame(muts)
@@ -193,7 +185,6 @@ def gene_explorer():
                 st.download_button("Download Mutations Excel", to_excel(df_muts), f"{gene}_mutations.xlsx")
             else:
                 st.warning("No mutation data found.")
-
         with tabs[2]:
             if drugs:
                 df_drugs = pd.DataFrame(drugs)
@@ -203,7 +194,6 @@ def gene_explorer():
                 st.download_button("Download Drugs Excel", to_excel(df_drugs), f"{gene}_drugs.xlsx")
             else:
                 st.warning("No drug matches found.")
-
         pdf_path = generate_pdf(gene, expr, muts, drugs)
         with open(pdf_path, "rb") as f:
             st.download_button("Download Branded PDF Report", f, f"{gene}_report.pdf")
