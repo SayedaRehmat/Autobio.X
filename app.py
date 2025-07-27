@@ -2,6 +2,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+import matplotlib.pyplot as plt
 from fpdf import FPDF
 import tempfile
 import os
@@ -98,6 +99,14 @@ if gene:
         st.subheader("Expression Data")
         expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
         st.dataframe(expr_df)
+        # Chart Visualization
+        st.write("### Expression Bar Chart")
+        fig, ax = plt.subplots()
+        ax.bar(expr_df['Sample'], expr_df['Expression'], color='skyblue')
+        ax.set_xlabel('Sample')
+        ax.set_ylabel('Expression Level')
+        ax.set_title(f'Gene Expression for {gene}')
+        st.pyplot(fig)
     else:
         st.warning(expr.get("error", "No expression data available."))
 
