@@ -83,10 +83,6 @@ expression_ok = expr and isinstance(expr, dict) and "error" not in expr
 mutation_ok = muts and isinstance(muts, list) and "error" not in muts[0]
 drug_ok = drugs and isinstance(drugs, list) and "error" not in drugs[0]
 
-# ✅ Define safe_text outside the 'if' (to avoid indentation errors)
-def safe_text(text):
-    return str(text).encode('latin1', 'ignore').decode('latin1')
-
 # ✅ Now only run PDF section if everything is okay
 if expression_ok and mutation_ok and drug_ok:
      # ✅ Define safe_text function once at the top (if not already)
