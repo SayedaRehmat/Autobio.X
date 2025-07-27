@@ -1,6 +1,5 @@
- # app.py
+ # app.py (Merged Streamlit + Backend)
 import streamlit as st
-import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 from fpdf import FPDF
@@ -9,98 +8,61 @@ import os
 
 # ------------------- CONFIG -------------------
 st.set_page_config(page_title="AutoBio-X", layout="wide")
-BASE_API = "https://autobio-x.onrender.com"
+
+# ------------------- LOAD DATA -------------------
+@st.cache_data
+def load_csv(file):
+    try:
+        return pd.read_csv(file)
+    except Exception as e:
+        st.error(f"Failed to load {file}: {e}")
+        return pd.DataFrame()
+
+expression_df = load_csv("expression.csv")
+mutation_df = load_csv("mutations.csv")
+drug_df = load_csv("dgidb_drugs.csv")
 
 # ------------------- HEADER -------------------
 st.image("logo.png", width=220)
 st.title("AutoBio-X: Gene Explorer & Drug Matcher")
 
 st.markdown("""
-### A real-time AI-powered tool to explore gene expression, mutation impact, and targeted drug matches in breast cancer.
-**Sign up for early updates and exclusive reports!**
+### Explore gene expression, mutation impact, and drug matches.
 """)
 
-# ------------------- API STATUS PANEL -------------------
-with st.expander("API Status & Debug"):
-    try:
-        test = requests.get(BASE_API, timeout=5)
-        st.info(f"API Status: {test.status_code}")
-    except Exception as e:
-        st.error(f"API unreachable: {e}")
-
-# ------------------- LANDING PAGE -------------------
-with st.expander("Join our email list for premium features"):
-    email = st.text_input("Your email")
-    if st.button("Subscribe"):
-        st.success(f"Thanks for subscribing, {email}! We'll keep you posted.")
-
-# ------------------- API HELPERS WITH FALLBACK -------------------
-def get_expression_data(gene: str):
-    url = f"{BASE_API}/expression/{gene}"
-    try:
-        r = requests.get(url, timeout=10)
-        if r.status_code == 200:
-            return r.json().get("expression", {})
-        else:
-            return {"error": f"API returned {r.status_code}"}
-    except Exception as e:
-        st.warning(f"Using sample expression data due to: {e}")
-        return {"Sample_1": 8.2, "Sample_2": 7.9, "Sample_3": 8.4}
-
-
-def get_mutation_data(gene: str):
-    url = f"{BASE_API}/mutation/{gene}"
-    try:
-        r = requests.get(url, timeout=10)
-        if r.status_code == 200:
-            return r.json()
-        else:
-            return [{"error": f"API returned {r.status_code}"}]
-    except Exception as e:
-        st.warning(f"Using sample mutation data due to: {e}")
-        return [
-            {"Mutation": "p.R175H", "Impact": "High"},
-            {"Mutation": "p.R248Q", "Impact": "Medium"}
-        ]
-
-
-def get_drug_data(gene: str):
-    url = f"{BASE_API}/drugs/{gene}"
-    try:
-        r = requests.get(url, timeout=10)
-        if r.status_code == 200:
-            return r.json()
-        else:
-            return [{"error": f"API returned {r.status_code}"}]
-    except Exception as e:
-        st.warning(f"Using sample drug data due to: {e}")
-        return [
-            {"Drug": "Olaparib", "Status": "Approved"},
-            {"Drug": "Talazoparib", "Status": "Clinical Trial"}
-        ]
-
-
-def safe_text(text):
-    return str(text).encode('latin1', 'ignore').decode('latin1')
-
-# ------------------- GENE INPUT -------------------
+# ------------------- GENE QUERY -------------------
 gene = st.text_input("Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
 
 expr, muts, drugs = {}, [], []
 
 if gene:
-    with st.spinner("Fetching data..."):
-        expr = get_expression_data(gene)
-        muts = get_mutation_data(gene)
-        drugs = get_drug_data(gene)
+    # Expression
+    result = expression_df[expression_df["Gene"].str.upper() == gene]
+    if not result.empty:
+        expr = result.iloc[0][1:].to_dict()
+    else:
+        expr = {"error": "No expression data found."}
+
+    # Mutations
+    muts = mutation_df[mutation_df["Gene"].str.upper() == gene]
+    if muts.empty:
+        muts = [{"error": "No mutation data found."}]
+    else:
+        muts = muts.to_dict(orient="records")
+
+    # Drugs
+    drugs = drug_df[drug_df["Gene"].str.upper() == gene]
+    if drugs.empty:
+        drugs = [{"error": "No drug matches found."}]
+    else:
+        drugs = drugs[["Drug", "Interaction"]].to_dict(orient="records")
 
     # ------------------- DISPLAY DATA -------------------
-    if expr and isinstance(expr, dict) and "error" not in expr:
+    if expr and "error" not in expr:
         st.subheader("Expression Data")
         expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
         st.dataframe(expr_df)
-        # Chart Visualization
-        st.write("### Expression Bar Chart")
+        # Bar chart
         fig, ax = plt.subplots()
         ax.bar(expr_df['Sample'], expr_df['Expression'], color='skyblue')
         ax.set_xlabel('Sample')
@@ -110,24 +72,23 @@ if gene:
     else:
         st.warning(expr.get("error", "No expression data available."))
 
-    if muts and isinstance(muts, list) and "error" not in muts[0]:
+    if muts and "error" not in muts[0]:
         st.subheader("Mutation Info")
         st.table(pd.DataFrame(muts))
     else:
         st.warning(muts[0].get("error", "No mutation data found."))
 
-    if drugs and isinstance(drugs, list) and "error" not in drugs[0]:
+    if drugs and "error" not in drugs[0]:
         st.subheader("Drug Matches")
         st.table(pd.DataFrame(drugs))
     else:
         st.warning(drugs[0].get("error", "No drug matches found."))
 
     # ------------------- PDF REPORT -------------------
-    expression_ok = expr and isinstance(expr, dict) and "error" not in expr
-    mutation_ok = muts and isinstance(muts, list) and "error" not in muts[0]
-    drug_ok = drugs and isinstance(drugs, list) and "error" not in drugs[0]
+    def safe_text(text):
+        return str(text).encode('latin1', 'ignore').decode('latin1')
 
-    if expression_ok and mutation_ok and drug_ok:
+    if "error" not in expr and "error" not in muts[0] and "error" not in drugs[0]:
         if st.button("Download Report as PDF"):
             pdf = FPDF()
             pdf.add_page()
