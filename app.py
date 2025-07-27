@@ -12,7 +12,7 @@ BASE_API = "https://autobio-x.onrender.com"
 
 # ------------------- HEADER -------------------
 st.image("logo.png", width=220)
-st.title("\ud83e\uddec AutoBio-X: Gene Explorer & Drug Matcher")
+st.title("AutoBio-X: Gene Explorer & Drug Matcher")
 
 st.markdown("""
 ### A real-time AI-powered tool to explore gene expression, mutation impact, and targeted drug matches in breast cancer.
@@ -20,7 +20,7 @@ st.markdown("""
 """)
 
 # ------------------- LANDING PAGE -------------------
-with st.expander("\ud83d\udc8c Join our email list for premium features"):
+with st.expander("Join our email list for premium features"):
     email = st.text_input("Your email")
     if st.button("Subscribe"):
         st.success(f"Thanks for subscribing, {email}! We'll keep you posted.")
@@ -54,7 +54,7 @@ def safe_text(text):
     return str(text).encode('latin1', 'ignore').decode('latin1')
 
 # ------------------- GENE INPUT -------------------
-gene = st.text_input("\ud83d\udd0d Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
+gene = st.text_input("Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
 
 expr, muts, drugs = {}, [], []
 
@@ -66,20 +66,20 @@ if gene:
 
     # ------------------- DISPLAY DATA -------------------
     if expr and isinstance(expr, dict) and "error" not in expr:
-        st.subheader("\ud83d\udcca Expression Data")
+        st.subheader("Expression Data")
         expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
         st.dataframe(expr_df)
     else:
         st.warning(expr.get("error", "No expression data available."))
 
     if muts and isinstance(muts, list) and "error" not in muts[0]:
-        st.subheader("\ud83e\uddec Mutation Info")
+        st.subheader("Mutation Info")
         st.table(pd.DataFrame(muts))
     else:
         st.warning(muts[0].get("error", "No mutation data found."))
 
     if drugs and isinstance(drugs, list) and "error" not in drugs[0]:
-        st.subheader("\ud83d\udc8a Drug Matches")
+        st.subheader("Drug Matches")
         st.table(pd.DataFrame(drugs))
     else:
         st.warning(drugs[0].get("error", "No drug matches found."))
@@ -90,7 +90,7 @@ if gene:
     drug_ok = drugs and isinstance(drugs, list) and "error" not in drugs[0]
 
     if expression_ok and mutation_ok and drug_ok:
-        if st.button("\ud83d\udc45 Download Report as PDF"):
+        if st.button("Download Report as PDF"):
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", size=14)
@@ -135,7 +135,7 @@ if gene:
                 pdf.output(tmpfile.name)
                 with open(tmpfile.name, "rb") as f:
                     st.download_button(
-                        label="\u2b07\ufe0f Download PDF Report",
+                        label="Download PDF Report",
                         data=f,
                         file_name=f"{gene}_AutoBioX_Report.pdf",
                         mime="application/pdf"
