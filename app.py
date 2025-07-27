@@ -54,29 +54,29 @@ def safe_text(text):
 expr, muts, drugs = {}, [{"error": "Not fetched"}], [{"error": "Not fetched"}]
 
 if gene:
-    # Expression
+     import pandas as pd
+
+if expr and "error" not in expr:
     st.subheader("📊 Expression Data")
-    expr = get_expression_data(gene)
-    if "error" in expr:
-        st.warning(expr["error"])
-    else:
-        st.json(expr)
+    expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
+    st.dataframe(expr_df)
+else:
+    st.warning(expr.get("error", "No expression data available."))
 
-    # Mutation
+
+if muts and isinstance(muts, list) and "error" not in muts[0]:
     st.subheader("🧬 Mutation Info")
-    muts = get_mutation_data(gene)
-    if isinstance(muts, list) and "error" in muts[0]:
-        st.warning(muts[0]["error"])
-    else:
-        st.json(muts)
+    st.table(pd.DataFrame(muts))
+else:
+    st.warning(muts[0].get("error", "No mutation data found."))
 
-    # Drug
+
+if drugs and isinstance(drugs, list) and "error" not in drugs[0]:
     st.subheader("💊 Drug Matches")
-    drugs = get_drug_data(gene)
-    if isinstance(drugs, list) and "error" in drugs[0]:
-        st.warning(drugs[0]["error"])
-    else:
-        st.json(drugs)
+    st.table(pd.DataFrame(drugs))
+else:
+    st.warning(drugs[0].get("error", "No drug matches found."))
+
 
 # ✅ Check that all data is valid
 expression_ok = expr and isinstance(expr, dict) and "error" not in expr
