@@ -1,4 +1,4 @@
- # app.py - Professional SaaS Bioinformatics Tool (Landing Page + Gene Explorer + Pricing)
+ # app.py - Professional SaaS Bioinformatics Tool with Downloads & Stripe
 import streamlit as st
 import pandas as pd
 import requests
@@ -21,6 +21,43 @@ st.markdown("""
     .section-title {font-size: 30px; color: #2c3e50; margin-top: 30px;}
 </style>
 """, unsafe_allow_html=True)
+
+# ------------------- UTILS -------------------
+def to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    return output.getvalue()
+
+def generate_pdf(gene, expr, muts, drugs):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=14)
+    pdf.cell(200, 10, txt=f"Gene Report: {gene}", ln=True, align='C')
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Expression Data", ln=True)
+    pdf.set_font("Arial", '', 12)
+    for sample, value in expr.items():
+        pdf.cell(0, 10, txt=f"{sample}: {value}", ln=True)
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Mutation Info", ln=True)
+    pdf.set_font("Arial", '', 12)
+    for mut in muts:
+        for k, v in mut.items():
+            pdf.cell(0, 10, txt=f"{k}: {v}", ln=True)
+        pdf.ln(3)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Drug Matches", ln=True)
+    pdf.set_font("Arial", '', 12)
+    for drug in drugs:
+        for k, v in drug.items():
+            pdf.cell(0, 10, txt=f"{k}: {v}", ln=True)
+        pdf.ln(3)
+    tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf.output(tmpfile.name)
+    return tmpfile.name
 
 # ------------------- HOMEPAGE -------------------
 def homepage():
@@ -50,6 +87,9 @@ def homepage():
         st.markdown("<div class='pricing-card'><b>Pro Plan</b><br>$49/month<br>Unlimited searches<br>PDF Reports<br><button>Upgrade</button></div>", unsafe_allow_html=True)
     with col3:
         st.markdown("<div class='pricing-card'><b>Enterprise</b><br>$499/month<br>Custom analysis<br>Dedicated support</div>", unsafe_allow_html=True)
+
+    if st.button("Upgrade to Pro Plan ($49/month)"):
+        st.info("[Stripe Checkout Placeholder - Integrate Here](https://stripe.com)")
 
     st.write("---")
     st.markdown("<div class='section-title'>Contact Us</div>", unsafe_allow_html=True)
@@ -96,7 +136,6 @@ def gene_explorer():
         muts = fetch_mutations(gene)
         drugs = fetch_drugs(gene)
 
-        # Expression Tab
         with tabs[0]:
             if expr:
                 st.subheader("Expression Data")
@@ -105,24 +144,37 @@ def gene_explorer():
                 fig, ax = plt.subplots()
                 ax.bar(df_expr['Sample'], df_expr['Expression'], color='skyblue')
                 st.pyplot(fig)
+                st.download_button("Download Expression CSV", df_expr.to_csv(index=False).encode('utf-8'), f"{gene}_expression.csv")
+                st.download_button("Download Expression Excel", to_excel(df_expr), f"{gene}_expression.xlsx")
             else:
                 st.warning("No expression data available.")
 
-        # Mutation Tab
         with tabs[1]:
             if muts:
+                df_muts = pd.DataFrame(muts)
                 st.subheader("Mutation Info")
-                st.table(pd.DataFrame(muts))
+                st.table(df_muts)
+                st.download_button("Download Mutations CSV", df_muts.to_csv(index=False).encode('utf-8'), f"{gene}_mutations.csv")
+                st.download_button("Download Mutations Excel", to_excel(df_muts), f"{gene}_mutations.xlsx")
             else:
                 st.warning("No mutation data found.")
 
-        # Drug Tab
         with tabs[2]:
             if drugs:
+                df_drugs = pd.DataFrame(drugs)
                 st.subheader("Drug Matches")
-                st.table(pd.DataFrame(drugs))
+                st.table(df_drugs)
+                st.download_button("Download Drugs CSV", df_drugs.to_csv(index=False).encode('utf-8'), f"{gene}_drugs.csv")
+                st.download_button("Download Drugs Excel", to_excel(df_drugs), f"{gene}_drugs.xlsx")
             else:
                 st.warning("No drug matches found.")
+
+        if expr and muts and drugs:
+            if st.button("Download Full Report (PDF)"):
+                pdf_path = generate_pdf(gene, expr, muts, drugs)
+                with open(pdf_path, "rb") as f:
+                    st.download_button("Download PDF Report", f, f"{gene}_report.pdf")
+                os.unlink(pdf_path)
 
 # ------------------- MAIN MENU -------------------
 menu = st.sidebar.radio("Navigation", ["Home", "Gene Explorer"])
