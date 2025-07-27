@@ -84,11 +84,11 @@ mutation_ok = muts and isinstance(muts, list) and "error" not in muts[0]
 drug_ok = drugs and isinstance(drugs, list) and "error" not in drugs[0]
 
 # ✅ Now only run PDF section if everything is okay
-if expression_ok and mutation_ok and drug_ok:
-     # ✅ Define safe_text function once at the top (if not already)
+ 
 def safe_text(text):
     return str(text).encode('latin1', 'ignore').decode('latin1')
-
+if expression_ok and mutation_ok and drug_ok:
+     # ✅ Define safe_text function once at the top (if not already)
 # ✅ Now safely create the PDF
 if st.button("📥 Download Report as PDF"):
     pdf = FPDF()
