@@ -90,7 +90,7 @@ def safe_text(text):
 if expression_ok and mutation_ok and drug_ok:
      # ✅ Define safe_text function once at the top (if not already)
 # ✅ Now safely create the PDF
-if st.button("📥 Download Report as PDF"):
+   if st.button("📥 Download Report as PDF"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=14)
