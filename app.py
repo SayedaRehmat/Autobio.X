@@ -1,10 +1,11 @@
- # app.py (Streamlit App with Tabs, Search, Downloads, and Styling)
+ # app.py (Streamlit App with Homepage, Hero Banner, and Excel Downloads)
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 import tempfile
 import os
+from io import BytesIO
 
 # ------------------- CONFIG -------------------
 st.set_page_config(page_title="AutoBio-X", layout="wide")
@@ -40,11 +41,20 @@ expression_df = load_csv("expression.csv")
 mutation_df = load_csv("mutations.csv")
 drug_df = load_csv("dgidb_drugs.csv")
 
-# ------------------- HEADER -------------------
+# ------------------- HERO SECTION -------------------
 st.image("logo.png", width=220)
 st.title("AutoBio-X: Gene Explorer & Drug Matcher")
 
 st.markdown("""
+<div style='background-color:#e3f2fd;padding:20px;border-radius:10px;'>
+    <h2>Welcome to AutoBio-X</h2>
+    <p>A powerful AI-driven platform for gene expression analysis, mutation insights, and targeted drug matches.</p>
+    <p><b>Created by Syeda Rehmat — Founder, BioZero</b></p>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+---
 ### Explore gene expression, mutation impact, and drug matches.
 """)
 
@@ -57,6 +67,13 @@ gene = search_gene.strip().upper() if search_gene else ""
 tabs = st.tabs(["Expression", "Mutations", "Drugs"])
 
 expr, muts, drugs = {}, [], []
+
+# ------------------- UTILS -------------------
+def to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    return output.getvalue()
 
 if gene:
     # Expression
@@ -102,6 +119,7 @@ if gene:
             ax.set_title(f'Gene Expression for {gene}')
             st.pyplot(fig)
             st.download_button("Download Expression CSV", expr_df.to_csv(index=False).encode('utf-8'), file_name=f"{gene}_expression.csv", mime="text/csv")
+            st.download_button("Download Expression Excel", to_excel(expr_df), file_name=f"{gene}_expression.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
             st.warning(expr.get("error", "No expression data available."))
 
@@ -111,6 +129,7 @@ if gene:
             muts_data = pd.DataFrame(muts)
             st.table(muts_data)
             st.download_button("Download Mutations CSV", muts_data.to_csv(index=False).encode('utf-8'), file_name=f"{gene}_mutations.csv", mime="text/csv")
+            st.download_button("Download Mutations Excel", to_excel(muts_data), file_name=f"{gene}_mutations.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
             st.warning(muts[0].get("error", "No mutation data found."))
 
@@ -120,6 +139,7 @@ if gene:
             drugs_data = pd.DataFrame(drugs)
             st.table(drugs_data)
             st.download_button("Download Drugs CSV", drugs_data.to_csv(index=False).encode('utf-8'), file_name=f"{gene}_drugs.csv", mime="text/csv")
+            st.download_button("Download Drugs Excel", to_excel(drugs_data), file_name=f"{gene}_drugs.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
             st.warning(drugs[0].get("error", "No drug matches found."))
 
@@ -184,6 +204,6 @@ if gene:
 st.markdown("""
 <hr style='border: 1px solid #ddd;'>
 <div style="text-align: center; color: gray;">
-    Created by <b>Syeda Rehmat</b> — Founder, <i>BioZero</i>
+    <b>Syeda Rehmat</b> — Founder, <i>BioZero</i> | <a href='#'>About</a> | <a href='#'>Contact</a>
 </div>
 """, unsafe_allow_html=True)
