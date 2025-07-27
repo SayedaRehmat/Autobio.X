@@ -1,4 +1,4 @@
- # app.py (Clean & Validated Version with Sample Data Fallback)
+ # app.py (Full Professional Tool with CSV/Excel/PDF Downloads and Pricing)
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,14 +13,9 @@ st.set_page_config(page_title="AutoBio-X", layout="wide")
 # ------------------- STYLES -------------------
 st.markdown("""
 <style>
-    .reportview-container {
-        background: #f7f9fc;
-    }
+    .reportview-container { background: #f7f9fc; }
     .stButton>button {
-        background-color: #007BFF;
-        color: white;
-        border-radius: 8px;
-        padding: 6px 18px;
+        background-color: #007BFF; color: white; border-radius: 8px; padding: 6px 18px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -38,7 +33,7 @@ def load_csv(file, default_data):
         st.warning(f"{file} not found. Using default sample data.")
         return default_data
 
-# Default fallback data
+# Default sample data
 sample_expression = pd.DataFrame({
     "Gene": ["TP53", "BRCA1"],
     "Sample1": [8.2, 6.3],
@@ -74,39 +69,15 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ------------------- ABOUT SECTION -------------------
+# ------------------- PRICING -------------------
 st.markdown("""
-## About AutoBio-X
-AutoBio-X is designed for researchers and clinicians to simplify complex bioinformatics workflows:
-- **Gene Expression Analysis** — Compare gene activity across samples.
-- **Mutation Insights** — Identify impactful gene mutations.
-- **Drug Matches** — Explore drugs targeting specific genes.
+## Pricing & Plans
+**Free Plan** — 5 searches/day, sample data only.
+**Pro Plan ($49/month)** — Unlimited searches, extended datasets, priority support.
+**Enterprise Plan ($499/month)** — Custom analysis, dedicated manager, API access.
 """)
-
-# ------------------- TEAM SECTION -------------------
-st.markdown("""
-## Meet the Team
-**Syeda Rehmat** — Founder & Bioinformatics Specialist  
-**Your Name Here** — Software Engineer  
-**Advisors** — Scientists and healthcare experts guiding the project.
-""")
-
-# ------------------- TESTIMONIALS -------------------
-st.markdown("""
-## Testimonials
-> *"AutoBio-X has transformed the way we analyze genetic data."* — **Dr. Ayesha Khan**
-
-> *"The drug-matching feature is a game-changer for precision medicine."* — **Prof. John Doe**
-""")
-
-# ------------------- GENE SEARCH -------------------
-all_genes = sorted(set(expression_df["Gene"]) | set(mutation_df["Gene"]) | set(drug_df["Gene"]))
-search_gene = st.text_input("Search Gene Symbol:", "")
-gene = search_gene.strip().upper() if search_gene else ""
-
-# ------------------- TABS -------------------
-tabs = st.tabs(["Expression", "Mutations", "Drugs"])
-expr, muts, drugs = {}, [], []
+if st.button("Upgrade to Pro Plan ($49/month)"):
+    st.info("[Redirecting to Stripe Checkout (placeholder)...](https://stripe.com)")
 
 # ------------------- UTILS -------------------
 def to_excel(df):
@@ -115,47 +86,95 @@ def to_excel(df):
         df.to_excel(writer, index=False, sheet_name='Sheet1')
     return output.getvalue()
 
-# ------------------- GENE DATA -------------------
-if gene:
-    # Expression
-    result = expression_df[expression_df["Gene"].str.upper() == gene]
-    expr = result.iloc[0][1:].to_dict() if not result.empty else {"error": "No expression data found."}
+def generate_pdf(gene, expr, muts, drugs):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=14)
+    pdf.cell(200, 10, txt=f"Gene Report: {gene}", ln=True, align='C')
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Expression Data", ln=True)
+    pdf.set_font("Arial", '', 12)
+    for sample, value in expr.items():
+        pdf.cell(0, 10, txt=f"{sample}: {value}", ln=True)
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Mutation Info", ln=True)
+    pdf.set_font("Arial", '', 12)
+    for mut in muts:
+        for k, v in mut.items():
+            pdf.cell(0, 10, txt=f"{k}: {v}", ln=True)
+        pdf.ln(3)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Drug Matches", ln=True)
+    pdf.set_font("Arial", '', 12)
+    for drug in drugs:
+        for k, v in drug.items():
+            pdf.cell(0, 10, txt=f"{k}: {v}", ln=True)
+        pdf.ln(3)
+    tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf.output(tmpfile.name)
+    return tmpfile.name
 
-    # Mutations
+# ------------------- SEARCH -------------------
+all_genes = sorted(set(expression_df["Gene"]) | set(mutation_df["Gene"]) | set(drug_df["Gene"]))
+gene = st.text_input("Search Gene Symbol:", "").strip().upper()
+
+# ------------------- TABS -------------------
+tabs = st.tabs(["Expression", "Mutations", "Drugs"])
+expr, muts, drugs = {}, [], []
+
+if gene:
+    expr_df = expression_df[expression_df["Gene"].str.upper() == gene]
+    expr = expr_df.iloc[0][1:].to_dict() if not expr_df.empty else {"error": "No expression data found."}
     muts_df = mutation_df[mutation_df["Gene"].str.upper() == gene]
     muts = muts_df.to_dict(orient="records") if not muts_df.empty else [{"error": "No mutation data found."}]
-
-    # Drugs
     drugs_df = drug_df[drug_df["Gene"].str.upper() == gene]
     drugs = drugs_df[["Drug", "Interaction"]].to_dict(orient="records") if not drugs_df.empty else [{"error": "No drug matches found."}]
 
-    # Display Expression
+    # Expression Tab
     with tabs[0]:
         if "error" not in expr:
             st.subheader("Expression Data")
-            expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
-            st.dataframe(expr_df)
+            df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
+            st.dataframe(df)
             fig, ax = plt.subplots()
-            ax.bar(expr_df['Sample'], expr_df['Expression'], color='skyblue')
+            ax.bar(df['Sample'], df['Expression'], color='skyblue')
             st.pyplot(fig)
+            st.download_button("Download Expression CSV", df.to_csv(index=False).encode('utf-8'), f"{gene}_expression.csv")
+            st.download_button("Download Expression Excel", to_excel(df), f"{gene}_expression.xlsx")
         else:
             st.warning(expr["error"])
 
-    # Display Mutations
+    # Mutation Tab
     with tabs[1]:
         if "error" not in muts[0]:
+            df = pd.DataFrame(muts)
             st.subheader("Mutation Info")
-            st.table(pd.DataFrame(muts))
+            st.table(df)
+            st.download_button("Download Mutations CSV", df.to_csv(index=False).encode('utf-8'), f"{gene}_mutations.csv")
+            st.download_button("Download Mutations Excel", to_excel(df), f"{gene}_mutations.xlsx")
         else:
             st.warning(muts[0]["error"])
 
-    # Display Drugs
+    # Drug Tab
     with tabs[2]:
         if "error" not in drugs[0]:
+            df = pd.DataFrame(drugs)
             st.subheader("Drug Matches")
-            st.table(pd.DataFrame(drugs))
+            st.table(df)
+            st.download_button("Download Drugs CSV", df.to_csv(index=False).encode('utf-8'), f"{gene}_drugs.csv")
+            st.download_button("Download Drugs Excel", to_excel(df), f"{gene}_drugs.xlsx")
         else:
             st.warning(drugs[0]["error"])
+
+    # PDF Download
+    if "error" not in expr and "error" not in muts[0] and "error" not in drugs[0]:
+        if st.button("Download Full Report (PDF)"):
+            pdf_path = generate_pdf(gene, expr, muts, drugs)
+            with open(pdf_path, "rb") as f:
+                st.download_button("Download PDF Report", f, f"{gene}_report.pdf")
+            os.unlink(pdf_path)
 
 # ------------------- CONTACT FORM -------------------
 st.markdown("---")
@@ -164,8 +183,7 @@ with st.form("contact_form"):
     name = st.text_input("Your Name")
     email = st.text_input("Your Email")
     message = st.text_area("Your Message")
-    submitted = st.form_submit_button("Send Message")
-    if submitted:
+    if st.form_submit_button("Send Message"):
         if name and email and message:
             st.success(f"Thank you {name}, we will reply to {email} soon!")
         else:
