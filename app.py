@@ -1,4 +1,4 @@
- # app.py (Streamlit App with Homepage, About, and Contact Form)
+ # app.py (Streamlit App with Homepage, About, Contact Form, and Team Section)
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -59,6 +59,18 @@ AutoBio-X is designed for researchers and clinicians to simplify complex bioinfo
 - **Drug Matches** — Explore drugs targeting specific genes.
 
 This tool was created by **Syeda Rehmat**, Founder of **BioZero**, with a mission to make precision medicine accessible to everyone.
+""")
+
+# ------------------- TEAM SECTION -------------------
+st.markdown("""
+## Meet the Team
+**Syeda Rehmat** — Founder & Bioinformatics Specialist  
+Passionate about bioinformatics and AI in healthcare.
+
+**Your Name Here** — Software Engineer  
+Focus on building scalable and user-friendly tools.
+
+**Advisors & Collaborators** — Scientists, researchers, and healthcare experts guiding the project.
 """)
 
 # ------------------- SEARCH BOX -------------------
