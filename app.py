@@ -25,29 +25,50 @@ with st.expander("Join our email list for premium features"):
     if st.button("Subscribe"):
         st.success(f"Thanks for subscribing, {email}! We'll keep you posted.")
 
-# ------------------- API HELPERS -------------------
+# ------------------- API HELPERS WITH FALLBACK -------------------
 def get_expression_data(gene: str):
+    url = f"{BASE_API}/expression/{gene}"
     try:
-        r = requests.get(f"{BASE_API}/expression/{gene}", timeout=10)
-        return r.json().get("expression", {})
-    except Exception:
-        return {"error": "Failed to fetch expression data."}
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            return r.json().get("expression", {})
+        else:
+            return {"error": f"API returned {r.status_code}"}
+    except Exception as e:
+        st.warning(f"Using sample expression data due to: {e}")
+        return {"Sample_1": 8.2, "Sample_2": 7.9, "Sample_3": 8.4}
 
 
 def get_mutation_data(gene: str):
+    url = f"{BASE_API}/mutation/{gene}"
     try:
-        r = requests.get(f"{BASE_API}/mutation/{gene}", timeout=10)
-        return r.json()
-    except Exception:
-        return [{"error": "Failed to fetch mutation data."}]
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            return r.json()
+        else:
+            return [{"error": f"API returned {r.status_code}"}]
+    except Exception as e:
+        st.warning(f"Using sample mutation data due to: {e}")
+        return [
+            {"Mutation": "p.R175H", "Impact": "High"},
+            {"Mutation": "p.R248Q", "Impact": "Medium"}
+        ]
 
 
 def get_drug_data(gene: str):
+    url = f"{BASE_API}/drugs/{gene}"
     try:
-        r = requests.get(f"{BASE_API}/drugs/{gene}", timeout=10)
-        return r.json()
-    except Exception:
-        return [{"error": "Failed to fetch drug data."}]
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            return r.json()
+        else:
+            return [{"error": f"API returned {r.status_code}"}]
+    except Exception as e:
+        st.warning(f"Using sample drug data due to: {e}")
+        return [
+            {"Drug": "Olaparib", "Status": "Approved"},
+            {"Drug": "Talazoparib", "Status": "Clinical Trial"}
+        ]
 
 
 def safe_text(text):
