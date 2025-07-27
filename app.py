@@ -1,4 +1,4 @@
- # app.py (Merged Streamlit + Backend)
+ # app.py (Merged Streamlit + Backend with Filters)
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -30,8 +30,11 @@ st.markdown("""
 ### Explore gene expression, mutation impact, and drug matches.
 """)
 
-# ------------------- GENE QUERY -------------------
-gene = st.text_input("Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
+# ------------------- GENE SELECTOR -------------------
+gene_list = sorted(set(expression_df["Gene"]) | set(mutation_df["Gene"]) | set(drug_df["Gene"])) if not expression_df.empty else []
+selected_gene = st.selectbox("Select a Gene:", ["-- Choose a Gene --"] + gene_list)
+
+gene = selected_gene.strip().upper() if selected_gene != "-- Choose a Gene --" else ""
 
 expr, muts, drugs = {}, [], []
 
