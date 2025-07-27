@@ -1,4 +1,4 @@
- # app.py (Merged Streamlit + Backend with Filters for Drugs and Mutations)
+ # app.py (Streamlit App with Tabs, Search, Downloads, and Styling)
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,6 +8,24 @@ import os
 
 # ------------------- CONFIG -------------------
 st.set_page_config(page_title="AutoBio-X", layout="wide")
+
+# Custom style
+st.markdown("""
+<style>
+    .reportview-container {
+        background: #f7f9fc;
+    }
+    .css-1d391kg, .css-1v3fvcr {
+        color: #333;
+    }
+    .stButton>button {
+        background-color: #007BFF;
+        color: white;
+        border-radius: 8px;
+        padding: 6px 18px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ------------------- LOAD DATA -------------------
 @st.cache_data
@@ -30,11 +48,13 @@ st.markdown("""
 ### Explore gene expression, mutation impact, and drug matches.
 """)
 
-# ------------------- GENE SELECTOR -------------------
-gene_list = sorted(set(expression_df["Gene"]) | set(mutation_df["Gene"]) | set(drug_df["Gene"])) if not expression_df.empty else []
-selected_gene = st.selectbox("Select a Gene:", ["-- Choose a Gene --"] + gene_list)
+# ------------------- SEARCH BOX -------------------
+all_genes = sorted(set(expression_df["Gene"]) | set(mutation_df["Gene"]) | set(drug_df["Gene"])) if not expression_df.empty else []
+search_gene = st.text_input("Search Gene Symbol:", "")
+gene = search_gene.strip().upper() if search_gene else ""
 
-gene = selected_gene.strip().upper() if selected_gene != "-- Choose a Gene --" else ""
+# ------------------- TABS -------------------
+tabs = st.tabs(["Expression", "Mutations", "Drugs"])
 
 expr, muts, drugs = {}, [], []
 
@@ -51,10 +71,10 @@ if gene:
     if muts_df.empty:
         muts = [{"error": "No mutation data found."}]
     else:
-        # Add filter for mutation impact if column exists
-        if "Impact" in muts_df.columns:
-            impact_filter = st.multiselect("Filter Mutations by Impact:", sorted(muts_df["Impact"].unique()), default=list(muts_df["Impact"].unique()))
-            muts_df = muts_df[muts_df["Impact"].isin(impact_filter)]
+        with tabs[1]:
+            if "Impact" in muts_df.columns:
+                impact_filter = st.multiselect("Filter Mutations by Impact:", sorted(muts_df["Impact"].unique()), default=list(muts_df["Impact"].unique()))
+                muts_df = muts_df[muts_df["Impact"].isin(impact_filter)]
         muts = muts_df.to_dict(orient="records")
 
     # Drugs
@@ -62,38 +82,46 @@ if gene:
     if drugs_df.empty:
         drugs = [{"error": "No drug matches found."}]
     else:
-        # Add filter for drug interaction or status if column exists
-        if "Interaction" in drugs_df.columns:
-            interaction_filter = st.multiselect("Filter Drugs by Interaction:", sorted(drugs_df["Interaction"].unique()), default=list(drugs_df["Interaction"].unique()))
-            drugs_df = drugs_df[drugs_df["Interaction"].isin(interaction_filter)]
+        with tabs[2]:
+            if "Interaction" in drugs_df.columns:
+                interaction_filter = st.multiselect("Filter Drugs by Interaction:", sorted(drugs_df["Interaction"].unique()), default=list(drugs_df["Interaction"].unique()))
+                drugs_df = drugs_df[drugs_df["Interaction"].isin(interaction_filter)]
         drugs = drugs_df[["Drug", "Interaction"]].to_dict(orient="records")
 
     # ------------------- DISPLAY DATA -------------------
-    if expr and "error" not in expr:
-        st.subheader("Expression Data")
-        expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
-        st.dataframe(expr_df)
-        # Bar chart
-        fig, ax = plt.subplots()
-        ax.bar(expr_df['Sample'], expr_df['Expression'], color='skyblue')
-        ax.set_xlabel('Sample')
-        ax.set_ylabel('Expression Level')
-        ax.set_title(f'Gene Expression for {gene}')
-        st.pyplot(fig)
-    else:
-        st.warning(expr.get("error", "No expression data available."))
+    with tabs[0]:
+        if expr and "error" not in expr:
+            st.subheader("Expression Data")
+            expr_df = pd.DataFrame(expr.items(), columns=["Sample", "Expression"])
+            st.dataframe(expr_df)
+            # Bar chart
+            fig, ax = plt.subplots()
+            ax.bar(expr_df['Sample'], expr_df['Expression'], color='skyblue')
+            ax.set_xlabel('Sample')
+            ax.set_ylabel('Expression Level')
+            ax.set_title(f'Gene Expression for {gene}')
+            st.pyplot(fig)
+            st.download_button("Download Expression CSV", expr_df.to_csv(index=False).encode('utf-8'), file_name=f"{gene}_expression.csv", mime="text/csv")
+        else:
+            st.warning(expr.get("error", "No expression data available."))
 
-    if muts and "error" not in muts[0]:
-        st.subheader("Mutation Info")
-        st.table(pd.DataFrame(muts))
-    else:
-        st.warning(muts[0].get("error", "No mutation data found."))
+    with tabs[1]:
+        if muts and "error" not in muts[0]:
+            st.subheader("Mutation Info")
+            muts_data = pd.DataFrame(muts)
+            st.table(muts_data)
+            st.download_button("Download Mutations CSV", muts_data.to_csv(index=False).encode('utf-8'), file_name=f"{gene}_mutations.csv", mime="text/csv")
+        else:
+            st.warning(muts[0].get("error", "No mutation data found."))
 
-    if drugs and "error" not in drugs[0]:
-        st.subheader("Drug Matches")
-        st.table(pd.DataFrame(drugs))
-    else:
-        st.warning(drugs[0].get("error", "No drug matches found."))
+    with tabs[2]:
+        if drugs and "error" not in drugs[0]:
+            st.subheader("Drug Matches")
+            drugs_data = pd.DataFrame(drugs)
+            st.table(drugs_data)
+            st.download_button("Download Drugs CSV", drugs_data.to_csv(index=False).encode('utf-8'), file_name=f"{gene}_drugs.csv", mime="text/csv")
+        else:
+            st.warning(drugs[0].get("error", "No drug matches found."))
 
     # ------------------- PDF REPORT -------------------
     def safe_text(text):
