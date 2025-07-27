@@ -87,7 +87,7 @@ if gene:
 def safe_text(text):
     return str(text).encode('latin1', 'ignore').decode('latin1')
 
-if expression_ok and mutation_ok and drug_ok:
+    if expression_ok and mutation_ok and drug_ok:
     if st.button("📥 Download Report as PDF"):
         pdf = FPDF()
         pdf.add_page()
