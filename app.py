@@ -49,7 +49,6 @@ def safe_text(text):
     return str(text).encode('latin1', 'ignore').decode('latin1')
 
 # -------- Inside Gene Query Section --------
-gene = st.text_input("🔍 Enter Gene Symbol (e.g., TP53, BRCA1)").strip().upper()
 
 # 🔒 PREVENT "Not defined" error by initializing safely
 expr, muts, drugs = {}, [{"error": "Not fetched"}], [{"error": "Not fetched"}]
